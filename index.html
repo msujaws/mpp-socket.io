@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+  <html>
+    <head>
+      <link href="/stylesheets/style.css" rel="stylesheet">
+      <script src="http://code.jquery.com/jquery-1.6.1.min.js"></script>
+
+    </head>
+    <body>
+      <div id="wrapper">
+        <div id="chat">
+          <div id="nickname">
+            <form id="set-nickname" class="wrap">
+              <p>Please type in your nickname and press enter.</p>
+              <input id="nick" />
+              <p id="nickname-err">Nickname already in use</p>
+            </form>
+          </div>
+        <div id="connecting">
+          <div class="wrap">Connecting to socket.io server</div>
+        </div>
+        <div id="messages">
+          <div id="nicknames"></div>
+          <div id="lines"></div>
+        </div>
+        <form id="send-message">
+          <input id="message"><button>Send</button>
+        </form>
+      </div>
+      <canvas id="court"></canvas>
+    </div>
+  </body>
+      <script src="/socket.io/socket.io.js"></script><script>// socket.io specific code
+          var socket = io.connect();
+
+          socket.on('connect', function () {
+            $('#chat').addClass('connected');
+          });
+
+          socket.on('announcement', function (msg) {
+            $('#lines').append($('<p>').append($('<em>').text(msg)));
+          });
+
+          socket.on('nicknames', function (nicknames) {
+            $('#nicknames').empty().append($('<span>Online: </span>'));
+            for (var i in nicknames) {
+              $('#nicknames').append($('<b>').text(nicknames[i]));
+            }
+          });
+
+          socket.on('user message', message);
+          socket.on('reconnect', function () {
+            $('#lines').remove();
+            message('System', 'Reconnected to the server');
+          });
+
+          socket.on('reconnecting', function () {
+            message('System', 'Attempting to re-connect to the server');
+          });
+
+          socket.on('error', function (e) {
+            message('System', e ? e : 'A unknown error occurred');
+          });
+
+          function message (from, msg) {
+            $('#lines').append($('<p>').append($('<b>').text(from), msg));
+          }
+
+          // dom manipulation
+          $(function () {
+            $('#set-nickname').submit(function (ev) {
+              socket.emit('nickname', $('#nick').val(), function (set) {
+                if (!set) {
+                  clear();
+                  return $('#chat').addClass('nickname-set');
+                }
+                $('#nickname-err').css('visibility', 'visible');
+              });
+              return false;
+            });
+
+            $('#send-message').submit(function () {
+              message('me', $('#message').val());
+              socket.emit('user message', $('#message').val());
+              clear();
+              $('#lines').get(0).scrollTop = 10000000;
+              return false;
+            });
+
+            function clear () {
+              $('#message').val('').focus();
+            };
+          });
+          
+  var constants = { court: { width: 0, height: 0, adjusted: false }, 
+					colors: { court: "green", ball: "yellow", paddle: "orange" },
+					paddle: { width: 0, height: 0, delta: 0 },
+					ball: { radius: 0 },
+					player: { id: 0, name: "" },
+					players: { names: "" }
+				  };                               
+
+  var state = { paddles: {},
+				ball: { left: 0, top: 0 },
+				sides: {}
+			  };
+
+	var canvas = document.getElementById("court"),
+	    ctx = canvas.getContext('2d');
+  
+  socket.on('environment', function( data ) {
+	DefineConstants( data );
+    DisplayPlayerNames();
+  });
+  
+  
+  socket.on('paddles', function(data) {
+    var paddles = data.positions;
+    // Overwrite the server's version of my own paddle position
+    // if I already know where I am so I don't redraw in the old spot.
+    if (state.paddles[constants.player.id])
+      paddles[constants.player.id] = state.paddles[constants.player.id];
+    state.paddles = paddles;
+    state.sides = data.sides;
+    if (!constants.court.adjusted) {
+      constants.court.adjusted = true;
+      if (state.sides.top == constants.player.id)
+        canvas.className = 'topPlayer';
+      else if (state.sides.left == constants.player.id)
+        canvas.className = 'leftPlayer';
+      else if (state.sides.right == constants.player.id)
+        canvas.className = 'rightPlayer';
+    }
+  });
+  
+  socket.on('ball', function (data) {
+	state.ball.left = data.position.left;
+	state.ball.top = data.position.top;
+	drawCanvas();     
+  });
+  
+  var drawCanvas = function() {
+	canvas.width = constants.court.width;
+	canvas.height = constants.court.height;
+	ctx.fillStyle = constants.colors.court;
+	ctx.fillRect(0, 0, constants.court.width, constants.court.height);
+	ctx.fillStyle = constants.colors.paddle;
+	
+	ctx.fillRect((state.paddles[state.sides.bottom] / 100 * constants.court.width) - (constants.paddle.width / 2),
+				 constants.court.height - constants.paddle.height, constants.paddle.width, constants.paddle.height);
+				 
+	ctx.fillRect((state.paddles[state.sides.top] / 100 * constants.court.width) - (constants.paddle.width / 2),
+				 0, constants.paddle.width, constants.paddle.height);
+				 
+	ctx.fillRect(0, (state.paddles[state.sides.left] / 100 * constants.court.height) - (constants.paddle.width / 2),
+				 constants.paddle.height, constants.paddle.width);
+				 
+	ctx.fillRect(constants.court.width - constants.paddle.height,
+				 (state.paddles[state.sides.right] / 100 * constants.court.height) - (constants.paddle.width / 2),				 
+				 constants.paddle.height, constants.paddle.width);
+	
+	ctx.fillStyle = constants.colors.ball;
+	ctx.beginPath(); 
+	ctx.arc( state.ball.left, state.ball.top, constants.ball.radius, 0, Math.PI * 2 );
+	ctx.fill();
+  };
+
+  var movePaddle = function (delta) {
+    var newLeft = state.paddles[constants.player.id] + delta;
+    if (newLeft >= 100)
+      newLeft = 100;
+    else if (newLeft <= 0)
+      newLeft = 0;
+    if (newLeft != state.paddles[constants.player.id]) {
+      state.paddles[constants.player.id] = newLeft;
+      socket.emit('paddle', {left: state.paddles[constants.player.id] });
+    }
+  };
+
+  window.addEventListener('keydown', function onKeyDown(aEvent) {
+	switch (aEvent.which) {
+	  case 37: // Left
+		if (state.sides.top == constants.player.id || state.sides.right == constants.player.id) movePaddle(constants.paddle.delta);
+		else movePaddle(-constants.paddle.delta);
+		break;
+	  case 39: // Right
+		if (state.sides.top == constants.player.id || state.sides.right == constants.player.id) movePaddle(-constants.paddle.delta);
+		else movePaddle(constants.paddle.delta);
+		break;
+	}
+  }, false);
+  
+  function DefineConstants( data ) {
+		$('#splash').hide();
+		constants.court.width = data.court.width;
+		constants.court.height = data.court.height;
+		constants.paddle.delta = data.paddle.delta;
+		constants.paddle.width  = data.paddle.width;
+		constants.paddle.height  = data.paddle.height;
+		constants.ball.radius = data.ball.radius;   
+		constants.player.id = data.player.id; 
+		constants.player.name = data.player.names[data.player.id];
+		constants.players.names = data.player.names;
+  }
+  
+  function DisplayPlayerNames() {		
+		var html='  Online players';
+		for( id in constants.players.names ) {
+			html+= ': ' + constants.players.names[id];
+		}
+		$('#user').html( 'Welcome, ' + constants.player.name + '!' );
+		$('#players').html( html );  
+  }          
+      </script>  
+</html>
