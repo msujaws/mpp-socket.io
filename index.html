@@ -7,28 +7,31 @@
     </head>
     <body>
       <div id="wrapper">
-        <div id="chat">
-          <div id="nickname">
-            <form id="set-nickname" class="wrap">
-              <p>Please type in your nickname and press enter.</p>
-              <input id="nick" />
-              <p id="nickname-err">Nickname already in use</p>
-            </form>
+        <div id="nickname">
+              <form id="set-nickname" class="wrap">
+                <h1>Multiplayer Ping Pong</h1>
+                <p>Please type in your nickname and press enter to play.</p>
+                <input id="nick" />
+                <p id="nickname-err"></p>
+              </form>
+        </div>
+        <div id="main">
+          <div id="score-board">
+            <div id="top"></div>
+            <div id="bottom"></div>
           </div>
-        <div id="connecting">
-          <div class="wrap">Connecting to socket.io server</div>
+          <div id="messages">
+            <div id="nicknames"></div>
+            <div id="lines"></div>
+          </div>
+          <form id="send-message">
+            <input id="message"><button>Send</button>
+          </form>
         </div>
-        <div id="messages">
-          <div id="nicknames"></div>
-          <div id="lines"></div>
-        </div>
-        <form id="send-message">
-          <input id="message"><button>Send</button>
-        </form>
+        <canvas id="court"></canvas>
       </div>
-      <canvas id="court"></canvas>
-    </div>
-  </body>
+      <div id="countdown"></div>
+    </body>
       <script src="/socket.io/socket.io.js"></script><script>// socket.io specific code
           var socket = io.connect();
 
@@ -68,13 +71,24 @@
           // dom manipulation
           $(function () {
             $('#set-nickname').submit(function (ev) {
-              socket.emit('nickname', $('#nick').val(), function (set) {
-                if (!set) {
-                  clear();
-                  return $('#chat').addClass('nickname-set');
-                }
-                $('#nickname-err').css('visibility', 'visible');
-              });
+              if ($('#nick').val().trim()) {                
+                socket.emit('nickname', $('#nick').val().trim(), function (set) {
+                  if (!set) {
+                    $('#nickname').delay(500).fadeOut();
+                    clear();
+                    return $('#chat').addClass('nickname-set');
+                  }
+                  $('#nickname-err').html('Nickname already in use');
+                  $('#nickname-err').css({opacity:1.0, visibility: "visible"})
+                  .delay(1000)
+                  .animate({opacity:0.0},500);
+                });
+              } else {
+                $('#nickname-err').html('Nickname cannot be blank');
+                $('#nickname-err').css({opacity:1.0, visibility: "visible"})
+                .delay(1000)
+                .animate({opacity:0.0},500);
+              }              
               return false;
             });
 
@@ -133,35 +147,39 @@
   });
   
   socket.on('ball', function (data) {
-	state.ball.left = data.position.left;
-	state.ball.top = data.position.top;
-	drawCanvas();     
+    state.ball.left = data.position.left;
+    state.ball.top = data.position.top;
+    drawCanvas();     
+  });
+  
+  socket.on('gameover', function (data) {
+    startNewRound(); 
   });
   
   var drawCanvas = function() {
-	canvas.width = constants.court.width;
-	canvas.height = constants.court.height;
-	ctx.fillStyle = constants.colors.court;
-	ctx.fillRect(0, 0, constants.court.width, constants.court.height);
-	ctx.fillStyle = constants.colors.paddle;
-	
-	ctx.fillRect((state.paddles[state.sides.bottom] / 100 * constants.court.width) - (constants.paddle.width / 2),
-				 constants.court.height - constants.paddle.height, constants.paddle.width, constants.paddle.height);
-				 
-	ctx.fillRect((state.paddles[state.sides.top] / 100 * constants.court.width) - (constants.paddle.width / 2),
-				 0, constants.paddle.width, constants.paddle.height);
-				 
-	ctx.fillRect(0, (state.paddles[state.sides.left] / 100 * constants.court.height) - (constants.paddle.width / 2),
-				 constants.paddle.height, constants.paddle.width);
-				 
-	ctx.fillRect(constants.court.width - constants.paddle.height,
-				 (state.paddles[state.sides.right] / 100 * constants.court.height) - (constants.paddle.width / 2),				 
-				 constants.paddle.height, constants.paddle.width);
-	
-	ctx.fillStyle = constants.colors.ball;
-	ctx.beginPath(); 
-	ctx.arc( state.ball.left, state.ball.top, constants.ball.radius, 0, Math.PI * 2 );
-	ctx.fill();
+    canvas.width = constants.court.width;
+    canvas.height = constants.court.height;
+    ctx.fillStyle = constants.colors.court;
+    ctx.fillRect(0, 0, constants.court.width, constants.court.height);
+    ctx.fillStyle = constants.colors.paddle;
+    
+    ctx.fillRect((state.paddles[state.sides.bottom] / 100 * constants.court.width) - (constants.paddle.width / 2),
+           constants.court.height - constants.paddle.height, constants.paddle.width, constants.paddle.height);
+           
+    ctx.fillRect((state.paddles[state.sides.top] / 100 * constants.court.width) - (constants.paddle.width / 2),
+           0, constants.paddle.width, constants.paddle.height);
+           
+    ctx.fillRect(0, (state.paddles[state.sides.left] / 100 * constants.court.height) - (constants.paddle.width / 2),
+           constants.paddle.height, constants.paddle.width);
+           
+    ctx.fillRect(constants.court.width - constants.paddle.height,
+           (state.paddles[state.sides.right] / 100 * constants.court.height) - (constants.paddle.width / 2),				 
+           constants.paddle.height, constants.paddle.width);
+    
+    ctx.fillStyle = constants.colors.ball;
+    ctx.beginPath(); 
+    ctx.arc( state.ball.left, state.ball.top, constants.ball.radius, 0, Math.PI * 2 );
+    ctx.fill();
   };
 
   var movePaddle = function (delta) {
@@ -175,6 +193,31 @@
       socket.emit('paddle', {left: state.paddles[constants.player.id] });
     }
   };
+  
+  var startNewRound = function () {
+      console.log('called');
+      function endCountdown() {
+      // logic to finish the countdown here
+      }
+
+      function handleTimer() {
+        console.log(count);
+        if(count === 0) {
+          clearInterval(timer);
+          $('#countdown').html(count).css({opacity:1.0, visibility: "visible"}).delay(1000)
+          .css({opacity:0.0});
+          endCountdown();
+        } else {
+          $('#count_num').html(count);
+          count--;
+        }
+      }
+
+      var count = 3;
+      var timer = setInterval(function() { handleTimer(count); }, 1000);
+  }
+  
+
 
   window.addEventListener('keydown', function onKeyDown(aEvent) {
 	switch (aEvent.which) {

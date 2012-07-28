@@ -7,32 +7,50 @@
   bottom: 0;
   height: 500px;
   margin: auto auto;
+  border: 18px solid #695F5F;
+  border-radius: 14px;
 }
 
-#chat,
+#main,
 #nickname,
 #messages {
   width: 270px;
 }
-#chat {
+#main {
   float: right;
   position: relative;
-  border: 1px solid #ccc;
+  border: 1px solid #695F5F;
 }
+
+#main #score-board {
+  background-color: #695F5F;
+  height: 120px;
+}
+
+#countdown {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 150px;
+  height: 150px;
+  margin-left: -209px;
+  margin-top: -170px;
+  z-index: 40;
+  opacity: 0.0;
+}
+
 #nickname,
 #connecting {
   position: absolute;
-  height: 520px;
+  height: 100%;
   z-index: 100;
   left: 0;
-  top: -10px;
   background: white;
   text-align: center;
   width: 773px;
   font: 15px Georgia;
   color: #666;
   display: block;
-  left: -500px;
 }
 #nickname .wrap,
 #connecting .wrap {
@@ -49,7 +67,7 @@
 #nickname #nickname-err {
   color: #8b0000;
   font-size: 12px;
-  visibility: hidden;
+  opacity: 0.0;
 }
 .connected #connecting {
   display: none;
@@ -58,7 +76,7 @@
   display: none;
 }
 #messages {
-  height: 468px;
+  height: 348px;
   background: #eee;
 }
 #messages em {
@@ -138,7 +156,7 @@
   height: 30px;
   padding: 0 10px;
   line-height: 30px;
-  width: 270px;
+  width: 250px;
 }
 #send-message input:focus {
   outline: 0;

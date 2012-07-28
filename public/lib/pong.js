@@ -15,11 +15,12 @@ var state = { paddles: {},
 			  rightPaddle: 0,
 			  names: {}
 			}
- 
-var calculateBallPosition = function() {
-    var left = state.ball.left + constants.ball.deltaLeft;
-    var top = state.ball.top + constants.ball.deltaTop;
 
+var calculateBallPosition = function() {
+  var left = state.ball.left + constants.ball.deltaLeft;
+  var top = state.ball.top + constants.ball.deltaTop;
+  var gameover = false;
+    
     //RIGHT SIDE
 	if (left + constants.ball.radius >= constants.court.width - constants.paddle.height ) {
 		if ( state.rightPaddle ) {
@@ -27,15 +28,14 @@ var calculateBallPosition = function() {
 				left = constants.court.width - constants.paddle.height - constants.ball.radius;
 				constants.ball.deltaLeft = -constants.ball.deltaLeft;				
 			} else {
-				console.log( 'game over right');
-				left = constants.court.width / 2;
-				top = constants.court.height / 2; 			
+        gameover = true;
+				console.log( 'game over right');			
 			}		
 		} else if ( left + constants.ball.radius >= constants.court.width ) {
 			left = constants.court.width - constants.ball.radius;
 			constants.ball.deltaLeft = -constants.ball.deltaLeft;
 		}
-    }
+  }
 	
 	//LEFT SIDE
 	if ( left - constants.ball.radius <= constants.paddle.height ) {		
@@ -44,16 +44,14 @@ var calculateBallPosition = function() {
 				left = constants.paddle.height + constants.ball.radius;
 				constants.ball.deltaLeft = -constants.ball.deltaLeft;	
 			} else {
+        gameover = true;
 				console.log( 'game over left' );
-				left = constants.court.width / 2;
-				top = constants.court.height / 2; 
 			}
 		} else if (left - constants.ball.radius <= 0) {
 			left = 0 + constants.ball.radius;
 			constants.ball.deltaLeft = -constants.ball.deltaLeft;		
 		}
-	}
-	
+	}	
 	
 	//BOTTOM SIDE
 	if (top + constants.ball.radius >= constants.court.height - constants.paddle.height) {
@@ -62,9 +60,8 @@ var calculateBallPosition = function() {
 				top = constants.court.height - constants.paddle.height - constants.ball.radius;
 				constants.ball.deltaTop = -constants.ball.deltaTop;			
 			} else {
-				console.log( 'game over bottom');
-				left = constants.court.width / 2;
-				top = constants.court.height / 2; 			
+        gameover = true;
+				console.log( 'game over bottom');			
 			}
 		} else if ( top + constants.ball.radius >= constants.court.height ){
 			top = constants.court.height - constants.ball.radius;
@@ -80,9 +77,7 @@ var calculateBallPosition = function() {
 				constants.ball.deltaTop = -constants.ball.deltaTop;			
 			}
 			else {
-				console.log( 'game over top');
-				left = constants.court.width / 2;
-				top = constants.court.height / 2; 			
+				console.log( 'game over top');	
 			}
         } else if ( top - constants.ball.radius <= 0 ) {	
 			//WALL
@@ -90,9 +85,14 @@ var calculateBallPosition = function() {
 			constants.ball.deltaTop = -constants.ball.deltaTop;	
 		}
 	}    
-	
+  
+  if (gameover){
+  	left = constants.court.width / 2;
+		top = constants.court.height / 2; 
+  }
   state.ball.left = left;
   state.ball.top = top;
+  
 };
 
 var ballHitTopPaddle = function( x ){
@@ -137,13 +137,8 @@ var addPlayer = function( id ) {
 		state.bottomPaddle = id;
 	} else if (!state.topPaddle) {
 		state.topPaddle = id;
-	} else if (!state.leftPaddle) {
-		state.leftPaddle = id;
-	} else if (!state.rightPaddle) {
-		state.rightPaddle = id;
 	} else {
-	  // placeholder for fifth player
-	  return;
+    return;
 	}
 	state.paddles[id] = 50;
 }
@@ -152,7 +147,7 @@ var addPlayer = function( id ) {
 exports.main = function( io, socket, serverState ) {
 
   addPlayer( socket.id );
-  
+  console.log(state);
 	socket.emit('environment', { court:  {  width:  constants.court.width, 
                                height: constants.court.height,
                              }, 
@@ -181,4 +176,20 @@ exports.main = function( io, socket, serverState ) {
     state.paddles[socket.id] = data.left;
   });
   
+}
+
+exports.removePlayer = function( io, socket ) {
+  if (state.bottomPaddle == socket.id)
+      state.bottomPaddle = 0;
+  else if (state.topPaddle == socket.id)
+      state.topPaddle = 0;
+  else if (state.leftPaddle == socket.id)
+      state.leftPaddle = 0;
+  else if (state.rightPaddle == socket.id)
+      state.rightPaddle = 0;
+  if ( state.connections == 0 ) {
+      clearInterval( state.intervalId );
+      state.intervalId = 0;
+  }
+  io.sockets.emit('paddles', { positions: state.paddles, sides: {bottom: state.bottomPaddle, top: state.topPaddle, left: state.leftPaddle, right: state.rightPaddle }});     
 }

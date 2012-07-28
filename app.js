@@ -1,97 +1,102 @@
 /**
- * Module dependencies.
+ * Server.
  */
 
-var express = require('express')
-  , nib = require('nib')
-  , sio = require('socket.io')
-  , pong = require('./public/lib/pong');
+function Server( port )
+{
+  this.port = process.env.PORT || port;
+  this.express = require('express');  
+  this.app = this.express.createServer();
+} 
 
-/**
- * App.
- */
-
-var app = express.createServer();
-
-/**
- * App configuration.
- */
-
-app.configure(function () {
-  app.use(express.static(__dirname + '/public'));
-  app.set('views', __dirname);
-  
-  // disable layout
-  app.set("view options", {layout: false});
-  
-  /* make a custom html template */
-  app.register('.html', {
-    compile: function(str, options){
-      return function(locals){
-        return str;
-      };
+Server.prototype = {
+    
+    configure: function Server_configure () {
+      var server = this;
+      this.app.configure(function () {
+        server.app.use(server.express.static(__dirname + '/public'));
+        server.app.set('views', __dirname);
+        
+        // disable layout
+        server.app.set("view options", {layout: false});
+        
+        /* make a custom html template */
+        server.app.register('.html', {
+          compile: function(str, options){
+            return function(locals){
+              return str;
+            };
+          }
+        });
+      });
+    },
+    
+    setRoutes: function Server_setRoutes () {
+      this.app.get('/', function (req, res) {
+        res.render('index.html');
+      });
+    },
+    
+    listen: function Server_listen () {
+      var server = this;
+      this.app.listen(this.port, function () {
+        var addr = server.app.address();
+        console.log('   app listening on http://' + addr.address + ':' + addr.port);
+      });    
     }
-  });
-});
+}
 
-/**
- * App routes.
- */
+function PingPong () {
+  this.pong = require('./public/lib/pong');
+  this.sio = require('socket.io');
+  this.io = this.sio.listen(server.app, { log: false });
+  this.nicknames = {};
+  this.state = { intervalId: 0, connections: 0 };
+}
 
-app.get('/', function (req, res) {
-  res.render('index.html');
-});
+PingPong.prototype = {
 
-/**
- * App listen.
- */
-
-var port = process.env.PORT || 3000;
-app.listen(port, function () {
-  var addr = app.address();
-  console.log('   app listening on http://' + addr.address + ':' + addr.port);
-});
-
-/**
- * Socket.IO server (single process only)
- */
-
-var io = sio.listen(app, { log: false })
-  , nicknames = {};
-
-// Set our transports
-io.configure(function () { 
-  io.set("transports", ["xhr-polling"]); 
-  io.set("polling duration", 20); 
-});
-
-var state = { intervalId: 0, connections: 0 };
-
-io.sockets.on('connection', function (socket) {
-  
-  socket.on('user message', function (msg) {
-    socket.broadcast.emit('user message', socket.nickname, msg);
-  });
-
-  socket.on('nickname', function (nick, fn) {
-    if (nicknames[nick]) {
-      fn(true);
-    } else {
-      fn(false);
-
-      pong.main( io, socket, state );
+  play: function PingPong_play () {
+    var context = this;
+    this.io.sockets.on('connection', function (socket) {
       
-      nicknames[nick] = socket.nickname = nick;
-      socket.broadcast.emit('announcement', nick + ' connected');
-      io.sockets.emit('nicknames', nicknames);
-    }
-  });  
-  
-  socket.on('disconnect', function () {
-    if (!socket.nickname) return;
+      socket.on('user message', function (msg) {
+        socket.broadcast.emit('user message', socket.nickname, msg);
+      });
 
-    delete nicknames[socket.nickname];
-    socket.broadcast.emit('announcement', socket.nickname + ' disconnected');
-    socket.broadcast.emit('nicknames', nicknames);
-  });
-});
+      socket.on('nickname', function (nick, fn) {
+        if (context.nicknames[nick]) {
+          fn(true);
+        } else {
+          fn(false);
+
+          context.pong.main( context.io, socket, context.state );
+          
+          context.nicknames[nick] = socket.nickname = nick;
+          socket.broadcast.emit('announcement', nick + ' connected');
+          context.io.sockets.emit('nicknames', context.nicknames);
+        }
+      });  
+      console.log(context.nicknames);
+      socket.on('disconnect', function () {
+        if (!socket.nickname) return;
+        delete context.nicknames[socket.nickname];
+        
+        context.pong.removePlayer( context.io, socket );
+        console.log('player left');
+        console.log(context.nicknames);
+        socket.broadcast.emit('announcement', socket.nickname + ' disconnected');
+        socket.broadcast.emit('nicknames', context.nicknames);
+      });
+    });
+  }
+}
+
+
+var server = new Server( 3000 );
+server.configure();
+server.setRoutes();
+server.listen();
+
+var pingpong = new PingPong();
+pingpong.play();
