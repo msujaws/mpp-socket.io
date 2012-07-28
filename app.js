@@ -46,6 +46,11 @@ Server.prototype = {
     }
 }
 
+var server = new Server( 3000 );
+server.configure();
+server.setRoutes();
+server.listen();
+
 function PingPong () {
   this.pong = require('./public/lib/pong');
   this.sio = require('socket.io');
@@ -68,8 +73,8 @@ PingPong.prototype = {
         if (context.nicknames[nick]) {
           fn(true);
         } else {
-          fn(false);
-
+          fn(false);  
+          
           context.pong.main( context.io, socket, context.state );
           
           context.nicknames[nick] = socket.nickname = nick;
@@ -91,12 +96,6 @@ PingPong.prototype = {
     });
   }
 }
-
-
-var server = new Server( 3000 );
-server.configure();
-server.setRoutes();
-server.listen();
 
 var pingpong = new PingPong();
 pingpong.play();

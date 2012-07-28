@@ -17,8 +17,10 @@
         </div>
         <div id="main">
           <div id="score-board">
-            <div id="top"></div>
-            <div id="bottom"></div>
+            <div id="top">7</div>
+            <div id="bottom">7</div>
+            <div id="player1">Top</div>
+            <div id="player2">Bottom (you)</div>
           </div>
           <div id="messages">
             <div id="nicknames"></div>
@@ -54,14 +56,6 @@
           socket.on('reconnect', function () {
             $('#lines').remove();
             message('System', 'Reconnected to the server');
-          });
-
-          socket.on('reconnecting', function () {
-            message('System', 'Attempting to re-connect to the server');
-          });
-
-          socket.on('error', function (e) {
-            message('System', e ? e : 'A unknown error occurred');
           });
 
           function message (from, msg) {
@@ -122,7 +116,7 @@
 	    ctx = canvas.getContext('2d');
   
   socket.on('environment', function( data ) {
-	DefineConstants( data );
+    DefineConstants( data );
     DisplayPlayerNames();
   });
   
@@ -152,8 +146,10 @@
     drawCanvas();     
   });
   
-  socket.on('gameover', function (data) {
-    startNewRound(); 
+  socket.on('score', function (data) {
+    console.log(data);
+    $('#top').html( (data.lives.top >= 0) ? data.lives.top: 0);
+    $('#bottom').html( (data.lives.bottom >= 0) ? data.lives.bottom: 0);
   });
   
   var drawCanvas = function() {
