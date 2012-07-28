@@ -1,5 +1,6 @@
 /**
- * Server.
+ * Server Constructor.
+ * @param port The port for the server to listen on
  */
 
 function Server( port )
@@ -9,8 +10,14 @@ function Server( port )
   this.app = this.express.createServer();
 } 
 
+/**
+ * Server methods.
+ */
 Server.prototype = {
     
+    /**
+     * Configure the server to disable layout and use html.
+     */    
     configure: function Server_configure () {
       var server = this;
       this.app.configure(function () {
@@ -20,7 +27,7 @@ Server.prototype = {
         // disable layout
         server.app.set("view options", {layout: false});
         
-        /* make a custom html template */
+        /* register html */
         server.app.register('.html', {
           compile: function(str, options){
             return function(locals){
@@ -31,12 +38,18 @@ Server.prototype = {
       });
     },
     
+    /**
+    * Route the server to render index.html
+    */       
     setRoutes: function Server_setRoutes () {
       this.app.get('/', function (req, res) {
         res.render('index.html');
       });
     },
     
+    /**
+    * Set the server to listen on the new port
+    */     
     listen: function Server_listen () {
       var server = this;
       this.app.listen(this.port, function () {
@@ -46,11 +59,9 @@ Server.prototype = {
     }
 }
 
-var server = new Server( 3000 );
-server.configure();
-server.setRoutes();
-server.listen();
-
+/**
+ * PingPong Constructor.
+ */
 function PingPong () {
   this.pong = require('./public/lib/pong');
   this.sio = require('socket.io');
@@ -59,8 +70,14 @@ function PingPong () {
   this.state = { intervalId: 0, connections: 0 };
 }
 
+/**
+ * PingPong methods.
+ */
 PingPong.prototype = {
 
+  /**
+   * Start up a new game when we open a websocket.
+   */
   play: function PingPong_play () {
     var context = this;
     this.io.sockets.on('connection', function (socket) {
@@ -75,6 +92,7 @@ PingPong.prototype = {
         } else {
           fn(false);  
           
+          //run the main pong method from /public/lib/pong.js
           context.pong.main( context.io, socket, context.state );
           
           context.nicknames[nick] = socket.nickname = nick;
@@ -97,5 +115,11 @@ PingPong.prototype = {
   }
 }
 
+var server = new Server( 3000 );
+server.configure();
+server.setRoutes();
+server.listen();
+
 var pingpong = new PingPong();
 pingpong.play();
+
