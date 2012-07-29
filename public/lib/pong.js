@@ -32,15 +32,21 @@ var calculateBallPosition = function() {
 		if ( state.rightPaddle ) {
 			if ( ballHitRightPaddle( top ) ) {
 				left = constants.court.width - constants.paddle.height - constants.ball.radius;
-				constants.ball.deltaLeft = -constants.ball.deltaLeft;				
+				constants.ball.deltaLeft = -constants.ball.deltaLeft;
+				socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																				deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 			} else {
 				console.log( 'game over right');
 				left = constants.court.width / 2;
 				top = constants.court.height / 2; 			
+				socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																				deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 			}		
 		} else if ( left + constants.ball.radius >= constants.court.width ) {
 			left = constants.court.width - constants.ball.radius;
 			constants.ball.deltaLeft = -constants.ball.deltaLeft;
+			socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																			deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 		}
     }
 	
@@ -50,14 +56,20 @@ var calculateBallPosition = function() {
 			if ( ballHitLeftPaddle( top ) ) {
 				left = constants.paddle.height + constants.ball.radius;
 				constants.ball.deltaLeft = -constants.ball.deltaLeft;	
+				socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																				deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 			} else {
 				console.log( 'game over left' );
 				left = constants.court.width / 2;
 				top = constants.court.height / 2; 
+				socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																				deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 			}
 		} else if (left - constants.ball.radius <= 0) {
 			left = 0 + constants.ball.radius;
 			constants.ball.deltaLeft = -constants.ball.deltaLeft;		
+			socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																			deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 		}
 	}
 	
@@ -68,6 +80,8 @@ var calculateBallPosition = function() {
 			if ( ballHitBottomPaddle( left ) ) {
 				top = constants.court.height - constants.paddle.height - constants.ball.radius;
 				constants.ball.deltaTop = -constants.ball.deltaTop;			
+				socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																				deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 			} else {
 				console.log( 'game over bottom');
         state.bottomLives -= 1;
@@ -76,10 +90,14 @@ var calculateBallPosition = function() {
         });
 				left = constants.court.width / 2;
 				top = constants.court.height / 2; 			
+				socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																				deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 			}
 		} else if ( top + constants.ball.radius >= constants.court.height ){
 			top = constants.court.height - constants.ball.radius;
 			constants.ball.deltaTop = -constants.ball.deltaTop;
+			socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																			deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 		}
 	}
 	
@@ -89,6 +107,8 @@ var calculateBallPosition = function() {
             if ( ballHitTopPaddle( left ) ) {
 				top = constants.paddle.height + constants.ball.radius ;
 				constants.ball.deltaTop = -constants.ball.deltaTop;			
+				socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																				deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 			}
 			else {
 				console.log( 'game over top');
@@ -98,11 +118,15 @@ var calculateBallPosition = function() {
         });
 				left = constants.court.width / 2;
 				top = constants.court.height / 2; 			
+				socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																				deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 			}
         } else if ( top - constants.ball.radius <= 0 ) {	
 			//WALL
 			top = constants.paddle.height + constants.ball.radius;
 			constants.ball.deltaTop = -constants.ball.deltaTop;	
+			socket.emit('ball', { vector: { x: state.ball.left, y: state.ball.top,
+																			deltaX: constants.ball.deltaLeft, deltaY: constants.ball.deltaTop }});
 		}
 	}    
 	
@@ -180,10 +204,6 @@ var addPlayer = function( id ) {
           calculateBallPosition();
       }, constants.ball.interval );  
   }
-  
-  socket.intervalId = setInterval( function(){
-      socket.emit('ball', { position: { left: state.ball.left, top: state.ball.top } });             
-  }, constants.ball.interval );   
   
   io.sockets.emit('paddles', { positions: state.paddles, sides: {bottom: state.bottomPaddle, top: state.topPaddle, left: state.leftPaddle, right: state.rightPaddle }});     
 

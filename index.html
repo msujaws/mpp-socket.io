@@ -206,9 +206,12 @@ PingPong.prototype = {
   {
     var pong = this;
     this.socket.on('ball', function (data) {
-      pong.state.ball.left = data.position.left;
-      pong.state.ball.top = data.position.top;
-      pong._drawCanvas();     
+      pong.state.ball.lastMessageReceived = Date.now();
+      pong.state.ball.x = data.vector.x;
+      pong.state.ball.deltaX = data.vector.deltaX;
+      pong.state.ball.y = data.vector.y;
+      pong.state.ball.deltaY = data.vector.deltaY;
+      pong._drawCanvas();
     });  
   },
   
@@ -222,7 +225,16 @@ PingPong.prototype = {
       $('#bottom').html( (data.lives.bottom >= 0) ? data.lives.bottom: 0);
     });
   },
-  
+
+  startDrawing: function pingpong_startDrawing ()
+  {
+    this._drawCanvas();
+    var animationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+                         window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+    if (animationFrame)
+      animationFrame(this.startDrawing.bind(this));
+  },
+
   /**
    * update the canvas
    */ 
@@ -253,11 +265,18 @@ PingPong.prototype = {
                       this.constants.court.height) - (this.constants.paddle.width / 2),				 
                       this.constants.paddle.height, 
                       this.constants.paddle.width);
-    
-    this.ctx.fillStyle = this.constants.colors.ball;
-    this.ctx.beginPath(); 
-    this.ctx.arc( this.state.ball.left, this.state.ball.top, this.constants.ball.radius, 0, Math.PI * 2 );
-    this.ctx.fill();
+
+    if (typeof this.state.ball.x != "undefined" &&
+        typeof this.state.ball.y != "undefined") {
+      this.ctx.fillStyle = this.constants.colors.ball;
+      this.ctx.beginPath();
+      var timeDelta = (Date.now() - this.state.ball.lastMessageReceived) / 10;
+      var ballPosX = this.state.ball.x + timeDelta * this.state.ball.deltaX;
+      var ballPosY = this.state.ball.y + timeDelta * this.state.ball.deltaY;
+      console.log(ballPosX + ", " + ballPosY);
+      this.ctx.arc( ballPosX, ballPosY, this.constants.ball.radius, 0, Math.PI * 2 );
+      this.ctx.fill();
+    }
   },
   
   /**
@@ -275,6 +294,7 @@ PingPong.prototype = {
     if (newLeft != this.state.paddles[this.constants.player.id]) {
       this.state.paddles[this.constants.player.id] = newLeft;
       this.socket.emit('paddle', {left: this.state.paddles[this.constants.player.id] });
+      this._drawCanvas();
     }
   },
   
@@ -315,6 +335,6 @@ pingpong.setPaddles();
 pingpong.setBallPosition();
 pingpong.setPaddleControls();
 pingpong.setDisplayScore();
-      
+pingpong.startDrawing();
 </script>  
 </html>
