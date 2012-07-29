@@ -100,14 +100,12 @@ PingPong.prototype = {
           context.io.sockets.emit('nicknames', context.nicknames);
         }
       });  
-      console.log(context.nicknames);
+
       socket.on('disconnect', function () {
         if (!socket.nickname) return;
         delete context.nicknames[socket.nickname];
         
         context.pong.removePlayer( context.io, socket );
-        console.log('player left');
-        console.log(context.nicknames);
         socket.broadcast.emit('announcement', socket.nickname + ' disconnected');
         socket.broadcast.emit('nicknames', context.nicknames);
       });
