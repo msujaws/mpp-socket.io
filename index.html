@@ -85,24 +85,12 @@ PingPong.prototype = {
   },
   
   /**
-   * display player names in the DOM
-   */
-  _displayPlayerNames: function PingPong_displayPlayerNames ()
-  {	
-    var html='  Online players';
-    for( id in this.constants.players.names ) {
-      html+= ': ' + this.constants.players.names[id];
-    }
-    $('#user').html( 'Welcome, ' + this.constants.player.name + '!' );
-    $('#players').html( html );
-  },
-  
-  /**
    * display chat messages in the DOM
    */
   _displayMessage: function PingPong_displayMessage (from, msg)
   {
-    $('#lines').append($('<p>').append($('<b>').text(from), msg));
+    var html = $('<p>').append($('<b>').text(from), msg);
+    $('#lines').append(html);
   },  
   
   /**
@@ -179,12 +167,11 @@ PingPong.prototype = {
   /**
    * setup the game environment
    */  
-  setEnvironment: function pingpong_getEnvironment ()
+  setEnvironment: function pingpong_setEnvironment ()
   {
     var pong = this;
     this.socket.on('environment', function( data ) {
       pong._defineConstants( data );
-      pong._displayPlayerNames();
     });
   },
   
@@ -302,7 +289,7 @@ PingPong.prototype = {
         case 37: // Left
           if (pong.state.sides.top == pong.constants.player.id || 
               pong.state.sides.right == pong.constants.player.id) {
-            pong._movePaddle(constants.paddle.delta);
+            pong._movePaddle(pong.constants.paddle.delta);
           } else {
             pong._movePaddle(-pong.constants.paddle.delta);
           }
